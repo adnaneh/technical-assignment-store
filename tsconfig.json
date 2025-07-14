@@ -3,11 +3,12 @@
     "target": "es5",
     "module": "commonjs",
     "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "declaration": true,
     "strict": true,
     "esModuleInterop": true,
     "types": ["jest", "node"]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "test/**/*.ts"],
   "exclude": ["node_modules", "**/*.spec.ts"]
 }

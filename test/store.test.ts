@@ -160,8 +160,7 @@ describe("Restricted Store", () => {
   let store: Store;
 
   beforeEach(() => {
-    store = new Store();
-    store.defaultPolicy = "none"; // Restrict all keys
+    store = new Store("none"); // Restrict all keys
   });
 
   it("write restricted key", () => {
@@ -284,8 +283,7 @@ These tests verify the behavior of the system when keys are overwritten or permi
 
 describe("Test Store - Behavior when Same Key is Used Multiple Times", () => {
   it("overwrites key with new value", () => {
-    const store = new Store();
-    store.defaultPolicy = "rw";
+    const store = new Store("rw");
     store.write("key", "value1");
     store.write("key", "value2");
     expect(store.read("key")).toBe("value2");

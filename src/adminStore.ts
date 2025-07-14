@@ -17,8 +17,7 @@ export class AdminStore extends Store {
   });
 
   constructor(user: UserStore) {
-    super();
-    this.defaultPolicy = "none";
+    super("none");
     this.user = user;
   }
 }

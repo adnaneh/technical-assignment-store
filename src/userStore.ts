@@ -5,7 +5,6 @@ export class UserStore extends Store {
   name: string = "John Doe";
 
   constructor() {
-    super();
-    this.defaultPolicy = "rw";
+    super("rw");
   }
 }
