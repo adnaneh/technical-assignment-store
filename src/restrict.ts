@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { InvalidPermissionError } from './errors';
+import { Store, StoreValue } from './store';
 
 export type Permission = 'r' | 'w' | 'rw' | 'none';
 
@@ -12,6 +13,17 @@ export function Restrict(permission: Permission = 'none'): PropertyDecorator {
 
   return (target: object, propertyKey: string | symbol): void => {
     Reflect.defineMetadata(META_KEY, permission, target, propertyKey);
+
+    Object.defineProperty(target, propertyKey, {
+      configurable: true,
+      enumerable: true,
+      get(this: Store) {
+        return this.getField(propertyKey as string);
+      },
+      set(this: Store, value: StoreValue) {
+        this.setField(propertyKey as string, value);
+      }
+    });
   };
 }
 

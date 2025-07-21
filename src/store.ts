@@ -11,8 +11,6 @@ export type StoreValue =
   | StoreResult
   | (() => StoreResult);
 
-type StoreIndex = Record<string, StoreValue>;
-
 export interface IStore {
   defaultPolicy: Permission;
   allowedToRead(key: string): boolean;
@@ -24,6 +22,7 @@ export interface IStore {
 }
 
 export class Store implements IStore {
+  private data: Record<string, StoreValue> = Object.create(null);
   constructor(public defaultPolicy: Permission = 'rw') {
     if (!['r', 'w', 'rw', 'none'].includes(defaultPolicy)) {
       throw new InvalidPermissionError(`Invalid defaultPolicy: ${defaultPolicy}`);
@@ -61,7 +60,7 @@ export class Store implements IStore {
       throw new PermissionDeniedError('write', lastKey);
     }
 
-    Store.setField(parent, lastKey, value);
+    parent.setField(lastKey, value);
     return value;
   }
 
@@ -69,14 +68,14 @@ export class Store implements IStore {
     if (!this.allowedToRead(key)) {
       throw new PermissionDeniedError('read', key);
     }
-    return Store.getField(this, key);
+    return this.getField(key);
   }
 
   public writeField(key: string, value: StoreValue): void {
     if (!this.allowedToWrite(key)) {
       throw new PermissionDeniedError('write', key);
     }
-    Store.setField(this, key, value);
+    this.setField(key, value);
   }
 
   public writeEntries(entries: JSONObject): void {
@@ -87,10 +86,11 @@ export class Store implements IStore {
 
   public entries(): JSONObject {
     const out: JSONObject = {};
-    for (const key of Object.keys(this)) {
+    
+    for (const key of Object.keys(this.data)) {
       if (!this.allowedToRead(key)) continue;
 
-      const val: StoreValue = Store.getField(this, key);
+      const val: StoreValue = this.getField(key);
       if (val instanceof Store) {
         out[key] = val.entries();
       } else if (typeof val !== 'function') {
@@ -113,11 +113,11 @@ export class Store implements IStore {
           throw new PermissionDeniedError('read', key);
         }
 
-        let nextVal: StoreValue = Store.getField(current, key);
+        let nextVal: StoreValue = current.getField(key);
 
         if (typeof nextVal === 'function') {
           nextVal = nextVal.call(current);
-          Store.setField(current, key, nextVal);
+          current.setField(key, nextVal);
         }
 
         if (nextVal === undefined) {
@@ -125,13 +125,13 @@ export class Store implements IStore {
             throw new PermissionDeniedError('write', key);
           }
           nextVal = new Store();
-          Store.setField(current, key, nextVal);
+          current.setField(key, nextVal);
         }
 
         if (!(nextVal instanceof Store)) {
           if (this.isPlainJSONObject(nextVal)) {
             nextVal = this.convertPlainObjectToStore(nextVal);
-            Store.setField(current, key, nextVal);
+            current.setField(key, nextVal);
           } else {
             throw new PathTraversalError('not a Store/object', key);
           }
@@ -155,17 +155,17 @@ export class Store implements IStore {
       throw new PermissionDeniedError('read', key);
     }
 
-    let value: StoreValue = Store.getField(ctx, key);
+    let value: StoreValue = ctx.getField(key);
 
     if (typeof value === 'function') {
       value = value.call(ctx);
-      Store.setField(ctx, key, value);
+      ctx.setField(key, value);
     }
 
     if (next === segments.length) {
       if (this.isPlainJSONObject(value)) {
         const s = this.convertPlainObjectToStore(value);
-        Store.setField(ctx, key, s);
+        ctx.setField(key, s);
         return s;
       }
       return value;
@@ -179,7 +179,7 @@ export class Store implements IStore {
 
     if (this.isPlainJSONObject(value)) {
       const s = this.convertPlainObjectToStore(value);
-      Store.setField(ctx, key, s);
+      ctx.setField(key, s);
       return s.readSegments(segments, next, s);
     }
 
@@ -210,14 +210,14 @@ export class Store implements IStore {
     return isJSONPrimitive(x);
   }
 
-  private static getField(target: Store, key: string): StoreValue {
-    return (target as unknown as StoreIndex)[key];
+  public getField(key: string): StoreValue {
+    return this.data[key];
   }
 
-  private static setField(target: Store, key: string, value: StoreValue): void {
+  public setField(key: string, value: StoreValue): void {
     if (!Store.isStoreValue(value)) {
       throw new InvalidValueError(`Invalid value for key "${key}" - must be StoreValue`);
     }
-    (target as unknown as StoreIndex)[key] = value;
+    this.data[key] = value;
   }
 }
